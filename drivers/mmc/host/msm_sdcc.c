@@ -78,12 +78,6 @@
 #define MSM_MMC_BUS_VOTING_DELAY	200 /* msecs */
 #define INVALID_TUNING_PHASE		-1
 
-#ifdef CONFIG_WIFI_CONTROL_FUNC
-extern int wcf_status_register(
-		void (*cb)(int card_present, void *dev), void *dev);
-extern unsigned int wcf_status(struct device *dev);
-#endif
-
 #if defined(CONFIG_DEBUG_FS)
 static void msmsdcc_dbg_createhost(struct msmsdcc_host *);
 static struct dentry *debugfs_dir;
@@ -6182,16 +6176,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	/*
 	 * Setup card detect change
 	 */
-
-#ifdef CONFIG_WIFI_CONTROL_FUNC
-	pr_info("%s: id %d, nonremovable %d\n", mmc_hostname(mmc),
-			host->pdev->id, plat->nonremovable);
-	if (plat->wifi_control_func) {
-		plat->register_status_notify = wcf_status_register;
-		plat->status = wcf_status;
-		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY | MMC_PM_KEEP_POWER;
-	}
-#endif
 
 	if (!plat->status_gpio)
 		plat->status_gpio = -ENOENT;

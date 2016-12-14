@@ -81,26 +81,6 @@ static struct regulator *wifi_batfet;
 static int batfet_ena;
 extern void sdio_ctrl_power(struct mmc_host *card, bool onoff);
 
-int wcf_status_register(void (*cb)(int card_present, void *dev), void *dev)
-{
-	pr_info("%s\n", __func__);
-
-	if (sdc_status_cb)
-		return -EINVAL;
-
-	sdc_status_cb = cb;
-	sdc_dev = dev;
-	wifi_mmc_host = ((struct msmsdcc_host *)dev)->mmc;
-
-	return 0;
-}
-
-unsigned int wcf_status(struct device *dev)
-{
-	pr_info("%s: wifi_detect = %d\n", __func__, g_wifi_detect);
-	return g_wifi_detect;
-}
-
 static int somc_wifi_set_reset(int on)
 {
 	return 0;
