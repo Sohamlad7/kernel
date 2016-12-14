@@ -23,12 +23,9 @@
 #include <linux/module.h>
 #include <linux/usb.h>
 #include <linux/firmware.h>
-#include <linux/suspend.h>
 
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
-
-#include "ath3k.h"
 
 #define VERSION "0.6"
 
@@ -39,7 +36,7 @@ static bool disable_scofix;
 static bool force_scofix;
 
 static int sco_conn;
-static int reset = 1;
+static bool reset = true;
 
 static struct usb_driver btusb_driver;
 
@@ -1358,7 +1355,6 @@ static int btusb_probe(struct usb_interface *intf,
 	struct btusb_data *data;
 	struct hci_dev *hdev;
 	int i, err;
-	struct ath3k_version version;
 
 	BT_DBG("intf %p id %p", intf, id);
 
@@ -1657,29 +1653,6 @@ done:
 }
 #endif
 
-static unsigned long btusb_pm_flags;
-#define BTUSB_PM_SUSPEND	(1)
-static int btusb_pm_notify(struct notifier_block *b,
-				unsigned long event, void *p)
-{
-	switch (event) {
-	case PM_SUSPEND_PREPARE:
-		set_bit(BTUSB_PM_SUSPEND, &btusb_pm_flags);
-		down_write(&btusb_pm_sem);
-		break;
-	case PM_POST_SUSPEND:
-		up_write(&btusb_pm_sem);
-		clear_bit(BTUSB_PM_SUSPEND, &btusb_pm_flags);
-		break;
-	}
-
-	return NOTIFY_DONE;
-}
-
-static struct notifier_block btusb_pm_notifier = {
-	.notifier_call = btusb_pm_notify,
-};
-
 static struct usb_driver btusb_driver = {
 	.name		= "btusb",
 	.probe		= btusb_probe,
@@ -1693,30 +1666,7 @@ static struct usb_driver btusb_driver = {
 	.disable_hub_initiated_lpm = 1,
 };
 
-static int __init btusb_driver_init(void)
-{
-	int ret = 0;
-	ret = usb_register(&btusb_driver);
-	/* ignore return value */
-	register_pm_notifier(&btusb_pm_notifier);
-	return ret;
-}
-module_init(btusb_driver_init);
-
-static void __exit btusb_driver_exit(void)
-{
-	unregister_pm_notifier(&btusb_pm_notifier);
-	/*
-	 * If unregister gets called before resume notification, we need to
-	 * release the semaphore to avoid deadlock.
-	 */
-	if (test_bit(BTUSB_PM_SUSPEND, &btusb_pm_flags)) {
-		up_write(&btusb_pm_sem);
-		clear_bit(BTUSB_PM_SUSPEND, &btusb_pm_flags);
-	}
-	usb_deregister(&btusb_driver);
-}
-module_exit(btusb_driver_exit);
+module_usb_driver(btusb_driver);
 
 module_param(ignore_dga, bool, 0644);
 MODULE_PARM_DESC(ignore_dga, "Ignore devices with id 08fd:0001");
